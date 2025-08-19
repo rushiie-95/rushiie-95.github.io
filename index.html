@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PUBG Global Championship 2025 – Points & Qualification Simulator</title>
+  <meta name="description" content="PGS & PGC points tracker with simulation (EWC/PGS9/PGS10), Liquipedia one-click update, pass-down logic by region, team logos via PageImages." />
+  <!-- Tailwind (CDN build) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html, body { background: #fff; }
+  </style>
+</head>
+<body class="bg-white text-neutral-900">
+  <noscript>
+    <div style="padding: 1rem; background:#fee2e2; color:#7f1d1d;">ต้องเปิดใช้งาน JavaScript เพื่อใช้งานหน้านี้</div>
+  </noscript>
+  <div id="root"></div>
+
+  <!-- React 18 UMD -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <script>
+  (function(){
+    const { useState, useMemo, useEffect, useCallback } = React;
+
+    // -----------------------------
+    // Slot allocation
+    // -----------------------------
+    const SLOTS = {
+      PGS: 8,
+      CHINA: 5,
+      KOREA: 4,
+      APAC: 5,
+      EMEA: 5,
+      AMERICAS: 5,
+      HOST: 1,
+    };
+
+    // -----------------------------
+    // PGS points distributions (length 16)
+    // -----------------------------
+    const DIST = {
+      EWC: [340,210,180,150,120,90,70,60,50,45,40,35,25,20,15,10],
+      PGS9: [400,250,210,180,140,110,90,80,60,55,50,45,30,25,20,15],
+      PGS10:[480,300,250,220,170,140,120,110,80,75,70,65,40,35,30,25],
+    };
+
+    // -----------------------------
+    // Default data (fallback before first sync)
+    // -----------------------------
+    const PGS_BASE_DEFAULT = {
+      "BB Team": { team: { name: "BB Team", region: "EMEA" }, pgs7_8: 120, ewc: 300, pgs9: 0, pgs10: 0 },
+      "Freecs": { team: { name: "Freecs", region: "KOREA" }, pgs7_8: 180, ewc: 180, pgs9: 0, pgs10: 0 },
+      "17 Gaming": { team: { name: "17 Gaming", region: "CHINA" }, pgs7_8: 300, ewc: 40, pgs9: 0, pgs10: 0 },
+      "Team Falcons": { team: { name: "Team Falcons", region: "EMEA" }, pgs7_8: 150, ewc: 150, pgs9: 0, pgs10: 0 },
+      "Forest Natural Gaming": { team: { name: "Forest Natural Gaming", region: "APAC" }, pgs7_8: 70, ewc: 100, pgs9: 0, pgs10: 0 },
+      "T1": { team: { name: "T1", region: "KOREA" }, pgs7_8: 0, ewc: 120, pgs9: 0, pgs10: 0 },
+      "JD Gaming": { team: { name: "JD Gaming", region: "CHINA" }, pgs7_8: 40, ewc: 70, pgs9: 0, pgs10: 0 },
+      "eArena": { team: { name: "eArena", region: "APAC" }, pgs7_8: 100, ewc: 0, pgs9: 0, pgs10: 0 },
+      "FULL SENSE": { team: { name: "FULL SENSE", region: "APAC" }, pgs7_8: 50, ewc: 45, pgs9: 0, pgs10: 0 },
+      "Twisted Minds": { team: { name: "Twisted Minds", region: "EMEA" }, pgs7_8: 30, ewc: 50, pgs9: 0, pgs10: 0 },
+      "Theerathon Five": { team: { name: "Theerathon Five", region: "APAC" }, pgs7_8: 60, ewc: 15, pgs9: 0, pgs10: 0 },
+      "Virtus.pro": { team: { name: "Virtus.pro", region: "EMEA" }, pgs7_8: 0, ewc: 60, pgs9: 0, pgs10: 0 },
+      "Baegopa": { team: { name: "Baegopa", region: "KOREA" }, pgs7_8: 35, ewc: 10, pgs9: 0, pgs10: 0 },
+      "The Expendables": { team: { name: "The Expendables", region: "APAC" }, pgs7_8: 45, ewc: 0, pgs9: 0, pgs10: 0 },
+      "Natus Vincere": { team: { name: "Natus Vincere", region: "EMEA" }, pgs7_8: 0, ewc: 35, pgs9: 0, pgs10: 0 },
+      "ROC Esports": { team: { name: "ROC Esports", region: "AMERICAS" }, pgs7_8: 0, ewc: 30, pgs9: 0, pgs10: 0 },
+      "FURIA": { team: { name: "FURIA", region: "AMERICAS" }, pgs7_8: 20, ewc: 0, pgs9: 0, pgs10: 0 },
+      "Geekay Esports": { team: { name: "Geekay Esports", region: "EMEA" }, pgs7_8: 0, ewc: 20, pgs9: 0, pgs10: 0 },
+      "BESTIA": { team: { name: "BESTIA", region: "AMERICAS" }, pgs7_8: 15, ewc: 0, pgs9: 0, pgs10: 0 },
+      "NewHappy": { team: { name: "NewHappy", region: "CHINA" }, pgs7_8: 10, ewc: 0, pgs9: 0, pgs10: 0 },
+      "Four Angry Men": { team: { name: "Four Angry Men", region: "CHINA" }, pgs7_8: 0, ewc: 5, pgs9: 0, pgs10: 0 },
+      "Petrichor Road": { team: { name: "Petrichor Road", region: "CHINA" }, pgs7_8: 5, ewc: 0, pgs9: 0, pgs10: 0 }
+    };
+
+    const PGC_REGION_DEFAULT = {
+      CHINA: [
+        { name: "Petrichor Road", pts: 200 }, { name: "17 Gaming", pts: 150 }, { name: "NewHappy", pts: 100 }, { name: "Too Cool", pts: 90 },
+        { name: "Game Start Win", pts: 80 }, { name: "Zhu Chao Gaming", pts: 70 }, { name: "Four Angry Men", pts: 60 }, { name: "Chosen Clique Gaming", pts: 50 },
+        { name: "Change The Game", pts: 0 }, { name: "Golden Quester Gaming", pts: 0 }, { name: "Jian Rong Gaming", pts: 0 }, { name: "Ninjas in Pyjamas", pts: 0 },
+        { name: "On1y", pts: 0 }, { name: "TYLOO", pts: 0 }, { name: "Team Magic", pts: 0 }, { name: "Weibo Gaming", pts: 0 }
+      ],
+      KOREA: [
+        { name: "Freecs", pts: 298 }, { name: "T1", pts: 113 }, { name: "Divine", pts: 80 }, { name: "Gen.G Esports", pts: 50 },
+        { name: "Baegopa", pts: 44 }, { name: "FN Esports", pts: 37 }, { name: "PENTAGRAM", pts: 32 }, { name: "Dplus", pts: 28 },
+        { name: "PHANTOM HEARTS", pts: 25 }, { name: "e-sports FROM", pts: 19 }, { name: "GAME PT", pts: 16 }, { name: "Eagle Owls", pts: 11 },
+        { name: "SUPERFECT Academy", pts: 11 }, { name: "SGA eSPORTS", pts: 8 }, { name: "Sentinel", pts: 8 }, { name: "GNL ESPORTS", pts: 6 }
+      ],
+      APAC: [
+        { name: "Decimate Gaming", pts: 60 }, { name: "Sharper Esport", pts: 60 }, { name: "Team Flash", pts: 60 }, { name: "AGAL International", pts: 40 },
+        { name: "Forest Natural Gaming", pts: 40 }, { name: "QiWA Esports", pts: 40 }, { name: "HAPPIE SQUAD", pts: 20 }, { name: "The Expendables", pts: 20 },
+        { name: "Theerathon Five", pts: 20 }, { name: "CERBERUS Esports", pts: 10 }, { name: "ROY Esports", pts: 10 }, { name: "Team NKT", pts: 10 },
+        { name: "eArena", pts: 0 }, { name: "FULL SENSE", pts: 0 }, { name: "FW Esports", pts: 0 }, { name: "TDT Esports", pts: 0 }
+      ],
+      EMEA: [
+        { name: "Geekay Esports", pts: 200 }, { name: "BB Team", pts: 120 }, { name: "Virtus.pro", pts: 90 }, { name: "Natus Vincere", pts: 65 },
+        { name: "Twisted Minds", pts: 60 }, { name: "FaZe Clan", pts: 55 }, { name: "winordie.", pts: 50 }, { name: "FUT Esports", pts: 45 },
+        { name: "DONT PANIC", pts: 40 }, { name: "Bushido", pts: 35 }, { name: "We live again", pts: 30 }, { name: "EXhalatioN", pts: 25 },
+        { name: "Gaimin Gladiators", pts: 20 }, { name: "Eternal Fire", pts: 15 }, { name: "Grove Street", pts: 10 }, { name: "The Myth of", pts: 5 }
+      ],
+      AMERICAS: [
+        { name: "FURIA", pts: 200 }, { name: "BESTIA", pts: 120 }, { name: "ROC Esports", pts: 90 }, { name: "Team Falcons", pts: 65 },
+        { name: "Team Liquid", pts: 60 }, { name: "WuJuTu", pts: 55 }, { name: "TOYO Esports", pts: 50 }, { name: "Al Qadsiah", pts: 45 },
+        { name: "Luminosity Gaming", pts: 40 }, { name: "Potentially Dangerous", pts: 35 }, { name: "Gooners", pts: 30 }, { name: "Dots", pts: 25 },
+        { name: "The God Squad", pts: 20 }, { name: "Empire Gaming", pts: 15 }, { name: "SAMCRISMO", pts: 10 }, { name: "The Outlaws", pts: 5 }
+      ],
+    };
+
+    // -----------------------------
+    // Utils
+    // -----------------------------
+    const classNames = (...xs) => xs.filter(Boolean).join(" ");
+
+    function getAllTeamsKnown(pgsBase, pgcRegion) {
+      const set = new Set(Object.keys(pgsBase));
+      Object.keys(pgcRegion).forEach((rk) => pgcRegion[rk].forEach((t) => set.add(t.name)));
+      return Array.from(set).sort();
+    }
+
+    function seededPGSTable({ overrideEWC, simEWC, simPGS9, simPGS10, pgsBase }) {
+      const table = {};
+      function ensure(teamName) {
+        if (!table[teamName]) {
+          const base = pgsBase[teamName];
+          table[teamName] = {
+            name: teamName,
+            region: (base && base.team && base.team.region) || "OTHER",
+            base: ((base && base.pgs7_8) || 0) + (overrideEWC ? 0 : ((base && base.ewc) || 0)),
+            ewc: 0, p9: 0, p10: 0, tiebreakP10Place: undefined,
+          };
+        }
+        return table[teamName];
+      }
+      const events = [
+        { arr: simEWC, field: 'ewc', dist: DIST.EWC },
+        { arr: simPGS9, field: 'p9',  dist: DIST.PGS9 },
+        { arr: simPGS10, field: 'p10', dist: DIST.PGS10, writePlace: true },
+      ];
+      events.forEach(({ arr, field, dist, writePlace }) => {
+        arr.forEach((teamName, idx) => {
+          if (!teamName) return; const row = ensure(teamName); row[field] += dist[idx] || 0; if (writePlace) row.tiebreakP10Place = Math.min(row.tiebreakP10Place ?? Infinity, idx+1);
+        });
+      });
+      Object.keys(pgsBase).forEach((k) => ensure(k));
+      const rows = Object.values(table).map((r) => ({ ...r, total: r.base + r.ewc + r.p9 + r.p10 }));
+      rows.sort((a,b)=>{ if(b.total!==a.total) return b.total-a.total; if(a.tiebreakP10Place!=null||b.tiebreakP10Place!=null){const aa=a.tiebreakP10Place??999; const bb=b.tiebreakP10Place??999; if(aa!==bb) return aa-bb;} return a.name.localeCompare(b.name); });
+      return rows;
+    }
+
+    function computeQualification({ pgsRows, pgcRegion }) {
+      const pgsTop8 = pgsRows.slice(0, SLOTS.PGS).map(r=>r.name);
+      const pgsTop8Set = new Set(pgsTop8);
+      const regionQual = { CHINA: [], KOREA: [], APAC: [], EMEA: [], AMERICAS: [], OTHER: [] };
+      const need = { CHINA: SLOTS.CHINA, KOREA: SLOTS.KOREA, APAC: SLOTS.APAC, EMEA: SLOTS.EMEA, AMERICAS: SLOTS.AMERICAS };
+      const ORDER = ["CHINA","KOREA","APAC","EMEA","AMERICAS"];
+      ORDER.forEach(rk => {
+        for(const row of (pgcRegion[rk]||[])){
+          if(regionQual[rk].length>=need[rk]) break;
+          if(pgsTop8Set.has(row.name)) continue; // pass-down
+          regionQual[rk].push(row.name);
+        }
+      });
+      return { pgsTop8, regionQual };
+    }
+
+    const REGION_ORDER = ["CHINA","KOREA","APAC","EMEA","AMERICAS"];
+
+    // -----------------------------
+    // Liquipedia sync helpers
+    // -----------------------------
+    const LP_API = "https://liquipedia.net/pubg/api.php";
+
+    // Customizable team name → page title mapping (for logos)
+    const TEAM_PAGE_MAP = {
+      // "Buriram United Esports": "Team:Buriram United Esports",
+      // "BB Team": "Team:BB Team",
+      // "Natus Vincere": "Team:Natus Vincere",
+      // Add more if a logo isn't detected correctly
+    };
+    const teamToLPTitle = (name) => TEAM_PAGE_MAP[name] || `Team:${name}`;
+
+    function useLiquipediaSync(setPgsBase, setPgcRegion){
+      const [state, setState] = useState({ status:'idle', last:null });
+      const syncNow = useCallback(async ()=>{
+        try{
+          setState(s=>({ ...s, status:'syncing' }));
+          const [pgsMap, regions] = await Promise.all([ fetchPGSPoints(), fetchRegionalPoints() ]);
+          if(pgsMap && Object.keys(pgsMap).length){
+            setPgsBase(prev=>{ const out={...prev}; Object.entries(pgsMap).forEach(([name,total])=>{ const region = (prev[name]&&prev[name].team.region)||'OTHER'; out[name]={ team:{name,region}, pgs7_8:Number(total)||0, ewc:0, pgs9:0, pgs10:0 }; }); return out; });
+          }
+          if(regions){ setPgcRegion(regions); }
+          setState({ status:'ok', last: new Date().toISOString() });
+        }catch(e){ console.warn('Liquipedia sync failed', e); setState({ status:'error', last: new Date().toISOString() }); }
+      },[setPgsBase,setPgcRegion]);
+      return [state, syncNow];
+    }
+
+    async function fetchPGSPoints(){
+      const html = await fetchLPHTML('PUBG_Global_Championship/2025/PGS/Points');
+      if(!html) return null; const rows = parseLPTable(html); const out={}; rows.forEach(r=>{ if(r.team && isFinite(r.pts)) out[r.team]=r.pts; }); return out;
+    }
+    async function fetchRegionalPoints(){
+      const pages = {
+        CHINA: ['PUBG_Global_Championship/2025/China/Points'],
+        KOREA: ['PUBG_Global_Championship/2025/Korea/Points'],
+        APAC:  ['PUBG_Global_Championship/2025/Asia_Pacific/Points'],
+        EMEA:  ['PUBG_Global_Championship/2025/EMEA/Points','PUBG_Global_Championship/2025'],
+        AMERICAS: ['PUBG_Global_Championship/2025/Americas/Points'],
+      };
+      const out = { CHINA:[], KOREA:[], APAC:[], EMEA:[], AMERICAS:[] };
+      await Promise.all(Object.entries(pages).map(async([rk, titles])=>{
+        for(const title of titles){ const html = await fetchLPHTML(title); if(!html) continue; const rows = parseLPTable(html); if(rows.length){ out[rk]=rows.map(r=>({name:r.team, pts:r.pts})).filter(r=>r.name); break; } }
+      }));
+      return out;
+    }
+    async function fetchLPHTML(pageTitle){
+      const url = `${LP_API}?action=parse&prop=text&page=${encodeURIComponent(pageTitle)}&format=json&origin=*`;
+      const res = await fetch(url); if(!res.ok) throw new Error('Liquipedia API error'); const data = await res.json(); return (data && data.parse && data.parse.text && data.parse.text['*']) || null;
+    }
+    function parseLPTable(html){
+      const doc = new DOMParser().parseFromString(html,'text/html');
+      const tables = Array.from(doc.querySelectorAll('table'));
+      for(const tbl of tables){
+        const headers = Array.from(tbl.querySelectorAll('thead th')).map(th=> (th.textContent||'').trim());
+        const hasTeam = headers.some(h=>/team/i.test(h)); if(!hasTeam) continue;
+        let ptsIdx=-1; const candidates=[/total/i,/pgc\s*points/i,/points/i];
+        for(const rx of candidates){ ptsIdx = headers.findIndex(h=> rx.test(h)); if(ptsIdx>=0) break; }
+        if(ptsIdx<0) ptsIdx = headers.length-1; // fallback
+        const teamIdx = headers.findIndex(h=>/team/i.test(h)); if(teamIdx<0) continue;
+        const bodyRows = Array.from(tbl.querySelectorAll('tbody tr')).filter(tr=> tr.querySelectorAll('td').length);
+        const out=[]; for(const tr of bodyRows){ const tds=Array.from(tr.querySelectorAll('td')); const name=(tds[teamIdx]&&tds[teamIdx].textContent||'').replace(/\n/g,' ').trim(); let ptsRaw=(tds[ptsIdx]&&tds[ptsIdx].textContent||'').replace(/[^0-9.\-]/g,'').trim(); const pts=Number(ptsRaw||0); if(name) out.push({ team:name, pts }); }
+        if(out.length) return out;
+      }
+      return [];
+    }
+
+    // -----------------------------
+    // UI helpers & small components
+    // -----------------------------
+    const Badge = ({ color='neutral', children }) => {
+      const map = {
+        emerald: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+        indigo:  'bg-indigo-50 border-indigo-200 text-indigo-700',
+        amber:   'bg-amber-50 border-amber-200 text-amber-700',
+        neutral: 'bg-neutral-50 border-neutral-200 text-neutral-700',
+      };
+      return React.createElement('span', { className: `text-xs px-2 py-1 rounded-full border ${map[color]}` }, children);
+    };
+    const Dot = ({ color='neutral' }) => {
+      const map = { emerald:'bg-emerald-500', indigo:'bg-indigo-500', amber:'bg-amber-500', neutral:'bg-neutral-400' };
+      return React.createElement('span', { className: `inline-block w-2.5 h-2.5 rounded-full ${map[color]}` });
+    };
+
+    const logoCache = new Map();
+    function TeamLogo({ name, size=20 }){
+      const [src,setSrc] = useState(logoCache.get(name) || null);
+      useEffect(()=>{
+        let mounted=true;
+        async function load(){
+          if(logoCache.has(name)){ setSrc(logoCache.get(name)); return; }
+          try{
+            const title = teamToLPTitle(name);
+            const url = `${LP_API}?action=query&prop=pageimages&format=json&pithumbsize=${size*2}&titles=${encodeURIComponent(title)}&origin=*`;
+            const res = await fetch(url); if(!res.ok) return; const data = await res.json(); const pages=data && data.query && data.query.pages || {}; const page=pages[Object.keys(pages)[0]]||{}; const img=page && page.thumbnail && page.thumbnail.source; if(img && mounted){ logoCache.set(name,img); setSrc(img); }
+          }catch(e){}
+        }
+        load();
+        return ()=>{ mounted=false; };
+      },[name,size]);
+      if(src) return React.createElement('img',{ src, alt:'', className:'inline-block rounded-sm', style:{ width:size, height:size, objectFit:'contain' }});
+      const initials = name.split(/\s+/).map(s=>s[0]).filter(Boolean).slice(0,2).join('').toUpperCase();
+      return React.createElement('div',{ className:'inline-flex items-center justify-center rounded-sm bg-neutral-200 text-neutral-700', style:{ width:size, height:size, fontSize: Math.max(10,size*0.5)} }, initials);
+    }
+    const TeamCell = ({ name }) => React.createElement('div', { className:'flex items-center gap-2' }, React.createElement(TeamLogo,{name, size:20}), React.createElement('span',{ className:'truncate', title:name }, name));
+
+    function InfoCard({ title, value, sub }){
+      return React.createElement('div',{ className:'rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm' },
+        React.createElement('div',{ className:'text-sm text-neutral-500' }, title),
+        React.createElement('div',{ className:'text-2xl font-semibold' }, value),
+        React.createElement('div',{ className:'text-xs text-neutral-500' }, sub)
+      );
+    }
+
+    function SelectTeam({ value, onChange, options }){
+      return React.createElement('div',{ className:'relative' },
+        React.createElement('input',{ list:'teams-list', value, onChange:(e)=>onChange(e.target.value), placeholder:'เลือกทีม', className:'w-full px-3 py-2 rounded-xl bg-white border border-neutral-300 outline-none focus:border-neutral-500' }),
+        React.createElement('datalist',{ id:'teams-list' }, options.map(t=> React.createElement('option',{ key:t, value:t }, t)))
+      );
+    }
+
+    function SimTable({ title, placements, setPlacements, filteredTeams, query, setQuery, dist }){
+      const setAt = (i,v)=>{ const next=placements.slice(); next[i]=v; setPlacements(next); };
+      return React.createElement('div',{ className:'rounded-2xl border border-neutral-200 bg-white overflow-hidden shadow-sm' },
+        React.createElement('div',{ className:'px-4 py-3 border-b border-neutral-200 flex items-center justify-between' },
+          React.createElement('div',{ className:'font-semibold' }, `จำลองผล ${title}`),
+          React.createElement('div',{ className:'text-xs text-neutral-500' }, `ลากสกอร์: ${dist.slice(0,4).join(', ')}...`)
+        ),
+        React.createElement('div',{ className:'p-3' },
+          React.createElement('div',{ className:'flex items-center gap-2 mb-2' },
+            React.createElement('input',{ value:query, onChange:(e)=>setQuery(e.target.value), placeholder:'ค้นหาชื่อทีม...', className:'w-full px-3 py-2 rounded-xl bg-white border border-neutral-300 outline-none focus:border-neutral-500' })
+          ),
+          React.createElement('table',{ className:'w-full text-sm' },
+            React.createElement('thead',{ className:'bg-neutral-50' },
+              React.createElement('tr',{ className:'text-neutral-600' },
+                React.createElement('th',{ className:'text-left px-3 py-2 w-10' }, '#'),
+                React.createElement('th',{ className:'text-left px-3 py-2' }, 'Team'),
+                React.createElement('th',{ className:'text-right px-3 py-2' }, 'Points')
+              )
+            ),
+            React.createElement('tbody', null,
+              placements.map((teamName, i)=> React.createElement('tr',{ key:i, className:'border-t border-neutral-200' },
+                React.createElement('td',{ className:'px-3 py-2' }, i+1),
+                React.createElement('td',{ className:'px-3 py-2' }, React.createElement(SelectTeam,{ value:teamName, onChange:(v)=>setAt(i,v), options:filteredTeams })),
+                React.createElement('td',{ className:'px-3 py-2 text-right' }, dist[i])
+              ))
+            )
+          )
+        )
+      );
+    }
+
+    function SimBlocks({ filteredTeams, query, setQuery, ewc, setEwc, pgs9, setPgs9, pgs10, setPgs10 }){
+      return React.createElement('div',{ className:'grid grid-cols-1 lg:grid-cols-3 gap-4' },
+        React.createElement(SimTable,{ title:'EWC', placements: ewc, setPlacements:setEwc, filteredTeams, query, setQuery, dist: DIST.EWC }),
+        React.createElement(SimTable,{ title:'PGS9', placements: pgs9, setPlacements:setPgs9, filteredTeams, query, setQuery, dist: DIST.PGS9 }),
+        React.createElement(SimTable,{ title:'PGS10', placements: pgs10, setPlacements:setPgs10, filteredTeams, query, setQuery, dist: DIST.PGS10 })
+      );
+    }
+
+    function Leaderboard({ rows, topCount, title }){
+      return React.createElement('div',{ className:'rounded-2xl border border-neutral-200 overflow-hidden bg-white shadow-sm' },
+        React.createElement('div',{ className:'px-4 py-3 border-b border-neutral-200 bg-neutral-50 flex items-center justify-between' },
+          React.createElement('div',{ className:'font-semibold' }, title),
+          React.createElement('div',{ className:'text-xs text-neutral-500' }, `Top ${topCount} → PGC`)
+        ),
+        React.createElement('table',{ className:'w-full text-sm table-fixed' },
+          React.createElement('colgroup',null,
+            React.createElement('col',{ className:'w-12' }),
+            React.createElement('col',null),
+            React.createElement('col',{ className:'w-28' }),
+            React.createElement('col',{ className:'w-20' }),
+            React.createElement('col',{ className:'w-24' }),
+            React.createElement('col',{ className:'w-20' }),
+            React.createElement('col',{ className:'w-20' }),
+            React.createElement('col',{ className:'w-24' }),
+          ),
+          React.createElement('thead',{ className:'bg-neutral-50' },
+            React.createElement('tr',{ className:'text-neutral-600' },
+              React.createElement('th',{ className:'text-left px-3 py-2' }, '#'),
+              React.createElement('th',{ className:'text-left px-3 py-2' }, 'Team'),
+              React.createElement('th',{ className:'text-left px-3 py-2' }, 'Region'),
+              React.createElement('th',{ className:'text-right px-3 py-2' }, 'Base'),
+              React.createElement('th',{ className:'text-right px-3 py-2' }, 'EWC +Sim'),
+              React.createElement('th',{ className:'text-right px-3 py-2' }, 'PGS9'),
+              React.createElement('th',{ className:'text-right px-3 py-2' }, 'PGS10'),
+              React.createElement('th',{ className:'text-right px-3 py-2' }, 'Total')
+            )
+          ),
+          React.createElement('tbody', null,
+            rows.map((r,i)=> React.createElement('tr',{ key:r.name, className: classNames('border-t border-neutral-200', i<topCount ? 'bg-emerald-50':'' ) },
+              React.createElement('td',{ className:'px-3 py-2' }, i+1),
+              React.createElement('td',{ className:'px-3 py-2' }, React.createElement(TeamCell,{ name:r.name })),
+              React.createElement('td',{ className:'px-3 py-2' }, labelRegion(r.region)),
+              React.createElement('td',{ className:'px-3 py-2 text-right tabular-nums' }, r.base),
+              React.createElement('td',{ className:'px-3 py-2 text-right tabular-nums' }, r.ewc),
+              React.createElement('td',{ className:'px-3 py-2 text-right tabular-nums' }, r.p9),
+              React.createElement('td',{ className:'px-3 py-2 text-right tabular-nums' }, r.p10),
+              React.createElement('td',{ className:'px-3 py-2 text-right font-medium tabular-nums' }, r.total)
+            ))
+          )
+        )
+      );
+    }
+
+    function RegionTable({ regionKey, rows=[], slot, pgsTop8, qualified }){
+      return React.createElement('div',{ className:'rounded-2xl border border-neutral-200 bg-white overflow-hidden shadow-sm' },
+        React.createElement('div',{ className:'px-4 py-3 border-b border-neutral-200 flex items-center justify-between' },
+          React.createElement('div',{ className:'font-semibold' }, `${labelRegion(regionKey)} • ${slot} slots`),
+          React.createElement('div',{ className:'text-xs text-neutral-500' }, 'PGC Points + Pass-down')
+        ),
+        React.createElement('table',{ className:'w-full text-sm table-fixed' },
+          React.createElement('colgroup',null,
+            React.createElement('col',{ className:'w-12' }),
+            React.createElement('col',null),
+            React.createElement('col',{ className:'w-24' }),
+            React.createElement('col',{ className:'w-44' }),
+          ),
+          React.createElement('thead',{ className:'bg-neutral-50' },
+            React.createElement('tr',{ className:'text-neutral-600' },
+              React.createElement('th',{ className:'text-left px-3 py-2' }, '#'),
+              React.createElement('th',{ className:'text-left px-3 py-2' }, 'Team'),
+              React.createElement('th',{ className:'text-right px-3 py-2' }, 'Pts'),
+              React.createElement('th',{ className:'text-right px-3 py-2' }, 'Status')
+            )
+          ),
+          React.createElement('tbody', null,
+            rows.map((r,i)=>{
+              const inTop8 = pgsTop8.has(r.name);
+              const isQualified = qualified && qualified.has(r.name);
+              const rowClass = inTop8 ? 'bg-amber-50' : isQualified ? 'bg-indigo-50' : '';
+              return React.createElement('tr',{ key:r.name, className: classNames('border-t border-neutral-200', rowClass) },
+                React.createElement('td',{ className:'px-3 py-2' }, i+1),
+                React.createElement('td',{ className:'px-3 py-2' }, React.createElement(TeamCell,{ name:r.name })),
+                React.createElement('td',{ className:'px-3 py-2 text-right tabular-nums' }, r.pts),
+                React.createElement('td',{ className:'px-3 py-2 text-right' },
+                  inTop8 ? React.createElement(Badge,{ color:'amber' }, 'PGS Qualified (Pass down)') : isQualified ? React.createElement(Badge,{ color:'indigo' }, 'Qualify (PGC)') : (i < slot ? React.createElement('span',{ className:'text-xs text-neutral-500' }, 'In-quota if no pass-down') : '')
+                )
+              );
+            })
+          )
+        )
+      );
+    }
+
+    function SummaryBlock({ pgsTop8, regionQual }){
+      return React.createElement('div',{ className:'grid grid-cols-1 lg:grid-cols-3 gap-4' },
+        React.createElement('div',{ className:'rounded-2xl border border-neutral-200 bg-white p-4 space-y-2 shadow-sm' },
+          React.createElement('div',{ className:'font-semibold mb-1' }, 'PGS Top 8'),
+          React.createElement('ul',{ className:'text-sm grid grid-cols-1 sm:grid-cols-2 gap-y-1 gap-x-4' }, pgsTop8.map(t=> React.createElement('li',{ key:t, className:'flex items-center gap-2' }, React.createElement(Dot,{color:'emerald'}), ' ', t )))
+        ),
+        React.createElement('div',{ className:'rounded-2xl border border-neutral-200 bg-white p-4 space-y-2 lg:col-span-2 shadow-sm' },
+          React.createElement('div',{ className:'font-semibold mb-1' }, 'Regional Qualifiers'),
+          React.createElement('div',{ className:'grid grid-cols-1 md:grid-cols-2 gap-3' },
+            REGION_ORDER.map(rk=> React.createElement('div',{ key:rk, className:'text-sm' },
+              React.createElement('div',{ className:'text-neutral-700' }, `${labelRegion(rk)} (${SLOTS[rk]} slots)`),
+              React.createElement('ul',{ className:'mt-1 space-y-1' }, (regionQual[rk]||[]).map(t=> React.createElement('li',{ key:t, className:'flex items-center gap-2' }, React.createElement(Dot,{color:'indigo'}), ' ', t )))
+            ))
+          )
+        )
+      );
+    }
+
+    function labelRegion(rk){ switch(rk){ case 'CHINA':return 'China'; case 'KOREA':return 'Korea'; case 'APAC':return 'APAC'; case 'EMEA':return 'EMEA'; case 'AMERICAS':return 'Americas'; default:return '—'; } }
+
+    function SyncBadge({ state }){
+      const { status, last } = state || {};
+      const text = status==='syncing' ? 'กำลังซิงก์จาก Liquipedia...' : status==='ok' ? `อัปเดตล่าสุด: ${ last ? new Date(last).toLocaleString() : '—' }` : status==='error' ? 'ซิงก์ล้มเหลว ใช้ข้อมูลล่าสุดที่มี' : 'พร้อมใช้งาน';
+      const cls = status==='syncing' ? 'bg-neutral-50 border-neutral-300 text-neutral-700' : status==='ok' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : status==='error' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-neutral-50 border-neutral-200 text-neutral-600';
+      return React.createElement('span',{ className:`text-xs px-2 py-1 rounded-full border ${cls}` }, text);
+    }
+
+    // -----------------------------
+    // Diagnostics (tests)
+    // -----------------------------
+    function csvToRows(csv){ const lines = csv.split(/\r?\n/).filter(Boolean); const headers = (lines.shift()||'').split(',').map(h=>h.trim()); return lines.map(ln=>{ const cells=ln.split(','); const obj={}; headers.forEach((h,i)=>obj[h]=cells[i]??''); return obj; }); }
+    function runBasicTests(){ const results=[]; const t=(name,fn)=>{ try{ fn(); results.push({name,pass:true}); }catch(e){ results.push({name,pass:false,msg:String(e.message||e)});} }; t('csvToRows splits on \n',()=>{ const csv='a,b\n1,2'; const rows=csvToRows(csv); if(rows.length!==1||rows[0].a!=='1') throw new Error('failed'); }); t('csvToRows splits on \r\n',()=>{ const csv='a,b\r\n1,2'; const rows=csvToRows(csv); if(rows.length!==1||rows[0].b!=='2') throw new Error('failed'); }); const passes=results.filter(r=>r.pass).length; const fails=results.length-passes; return { passes, fails, results }; }
+    const DevPanel = ({ results }) => results ? React.createElement('details',{ className:'rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm', open:false }, React.createElement('summary',{ className:'cursor-pointer text-sm font-medium' }, `Developer Diagnostics: ${results.passes} passed, ${results.fails} failed`), React.createElement('ul',{ className:'mt-2 text-xs text-neutral-700 space-y-1' }, results.results.map((r,i)=> React.createElement('li',{ key:i }, React.createElement('span',{ className: r.pass ? 'text-emerald-700':'text-rose-700' }, r.pass?'PASS':'FAIL'), ' — ', r.name, r.msg?`: ${r.msg}`:'')))) : null;
+
+    // -----------------------------
+    // App component
+    // -----------------------------
+    function App(){
+      const [overrideEWC, setOverrideEWC] = useState(false);
+      const empty16=()=>Array.from({length:16},()=>"");
+      const [ewc,setEwc]=useState(empty16());
+      const [pgs9,setPgs9]=useState(empty16());
+      const [pgs10,setPgs10]=useState(empty16());
+      const [pgsBase,setPgsBase]=useState(PGS_BASE_DEFAULT);
+      const [pgcRegion,setPgcRegion]=useState(PGC_REGION_DEFAULT);
+      const [query,setQuery]=useState('');
+      const TEAM_OPTIONS = useMemo(()=> getAllTeamsKnown(pgsBase, pgcRegion), [pgsBase, pgcRegion]);
+      const filteredTeams = useMemo(()=> TEAM_OPTIONS.filter(t=> t.toLowerCase().includes(query.toLowerCase())), [TEAM_OPTIONS, query]);
+      const pgsRows = useMemo(()=> seededPGSTable({ overrideEWC, simEWC: (overrideEWC? ewc : Array.from({length:16},()=>'')), simPGS9: pgs9, simPGS10: pgs10, pgsBase }), [overrideEWC, ewc, pgs9, pgs10, pgsBase]);
+      const { pgsTop8, regionQual } = useMemo(()=> computeQualification({ pgsRows, pgcRegion }), [pgsRows, pgcRegion]);
+      const resetAll = ()=>{ setEwc(empty16()); setPgs9(empty16()); setPgs10(empty16()); setQuery(''); };
+      const [syncState, syncNow] = useLiquipediaSync(setPgsBase, setPgcRegion);
+      useEffect(()=>{ syncNow(); },[]); // load once
+      const testResults = useMemo(()=> runBasicTests(), []);
+
+      return React.createElement('div',{ className:'min-h-screen bg-white text-neutral-900' },
+        React.createElement('header',{ className:'sticky top-0 z-30 backdrop-blur bg-white/80 border-b border-neutral-200' },
+          React.createElement('div',{ className:'max-w-7xl mx-auto px-4 py-4 flex items-center gap-3' },
+            React.createElement('div', { className:'text-lg' }, '🏆'),
+            React.createElement('h1',{ className:'text-xl sm:text-2xl font-semibold' }, 'PUBG Global Championship 2025 – Points & Qualification Simulator'),
+            React.createElement('div',{ className:'ml-auto flex items-center gap-2 text-sm' },
+              React.createElement(SyncBadge,{ state: syncState }),
+              React.createElement('button',{ onClick: syncNow, disabled: syncState.status==='syncing', className:'px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-50 border border-neutral-300 shadow-sm inline-flex items-center gap-2 disabled:opacity-60' }, '🔄', ' Update from Liquipedia')
+            )
+          )
+        ),
+        React.createElement('main',{ className:'max-w-7xl mx-auto p-4 space-y-10' },
+          React.createElement('section',{ className:'flex flex-wrap items-center gap-3' },
+            React.createElement('div',{ className:'flex items-center gap-3 text-xs text-neutral-700' },
+              React.createElement('div',{ className:'flex items-center gap-1' }, React.createElement(Dot,{color:'emerald'}), ' ผ่านโควต้า PGS'),
+              React.createElement('div',{ className:'flex items-center gap-1' }, React.createElement(Dot,{color:'indigo'}), ' ผ่านโควต้า PGC (ภูมิภาค)'),
+              React.createElement('div',{ className:'flex items-center gap-1' }, React.createElement(Dot,{color:'amber'}), ' Pass down')
+            )
+          ),
+          React.createElement('section',{ className:'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3' },
+            React.createElement(InfoCard,{ title:'PGS Slots', value:SLOTS.PGS, sub:'Top of global PGS leaderboard' }),
+            React.createElement(InfoCard,{ title:'China', value:SLOTS.CHINA, sub:'Regional PGC Points' }),
+            React.createElement(InfoCard,{ title:'Korea', value:SLOTS.KOREA, sub:'Regional PGC Points' }),
+            React.createElement(InfoCard,{ title:'APAC', value:SLOTS.APAC, sub:'Regional PGC Points' }),
+            React.createElement(InfoCard,{ title:'EMEA', value:SLOTS.EMEA, sub:'Regional PGC Points' }),
+            React.createElement(InfoCard,{ title:'Americas', value:SLOTS.AMERICAS, sub:'Regional PGC Points' })
+          ),
+          React.createElement('section',{ className:'space-y-4' },
+            React.createElement('div',{ className:'flex items-center gap-3' }, React.createElement('div',{ className:'text-lg' }, '📊'), React.createElement('h2',{ className:'text-lg sm:text-xl font-semibold' }, '1) คะแนนสะสมจาก PGS Points')),
+            React.createElement('p',{ className:'text-neutral-600 text-sm leading-relaxed' }, 'กดปุ่ม "Update from Liquipedia" เพื่อดึงคะแนนล่าสุด (PGS/Points). จากนั้นสามารถจำลองผล EWC/PGS9/PGS10 ต่อจากคะแนนปัจจุบันได้'),
+            React.createElement('div',{ className:'flex flex-wrap items-center gap-2' },
+              React.createElement('label',{ className:'flex items-center gap-2 text-sm select-none' }, React.createElement('input',{ type:'checkbox', className:'accent-emerald-600', checked: overrideEWC, onChange:(e)=>setOverrideEWC(e.target.checked) }), 'Override EWC (แก้ไขผล EWC ด้วยการจำลอง)'),
+              React.createElement('button',{ onClick: resetAll, className:'ml-auto text-sm px-3 py-1.5 rounded-xl bg-white hover:bg-neutral-50 border border-neutral-300 shadow-sm flex items-center gap-2' }, '🔄', 'Reset Simulation')
+            ),
+            React.createElement(SimBlocks,{ filteredTeams, query, setQuery, ewc, setEwc, pgs9, setPgs9, pgs10, setPgs10 }),
+            React.createElement(Leaderboard,{ rows: pgsRows, topCount: SLOTS.PGS, title:'PGS Leaderboard (รวมฐาน + จำลอง)' })
+          ),
+          React.createElement('section',{ className:'space-y-4' },
+            React.createElement('div',{ className:'flex items-center gap-3' }, React.createElement('div',{ className:'text-lg' }, '🔢'), React.createElement('h2',{ className:'text-lg sm:text-xl font-semibold' }, '2) คะแนนสะสมจาก PGC Points (ตามโซน)')),
+            React.createElement('p',{ className:'text-neutral-600 text-sm leading-relaxed' }, 'กดปุ่ม "Update from Liquipedia" เพื่ออัปเดตคะแนนของแต่ละโซน (China/Korea/APAC/EMEA/Americas). ไฮไลท์ผล pass-down ให้อัตโนมัติเมื่อทีมในโซนเดียวกันได้สิทธิ์จาก PGS แล้ว'),
+            React.createElement('div',{ className:'grid grid-cols-1 lg:grid-cols-12 gap-4' },
+              REGION_ORDER.map(rk=> React.createElement('div',{ key:rk, className:'lg:col-span-6' }, React.createElement(RegionTable,{ regionKey:rk, rows: pgcRegion[rk], slot: SLOTS[rk], pgsTop8: new Set(pgsTop8), qualified: new Set((regionQual[rk]||[])) })))
+            )
+          ),
+          React.createElement('section',{ className:'space-y-4' },
+            React.createElement('div',{ className:'flex items-center gap-3' }, React.createElement('div',{ className:'text-lg' }, '✅'), React.createElement('h2',{ className:'text-lg sm:text-xl font-semibold' }, 'สรุปทีมที่ได้สิทธิ์เข้าร่วม PGC 2025 (จากการจำลองนี้)')),
+            React.createElement(SummaryBlock,{ pgsTop8, regionQual }),
+            React.createElement('div',{ className:'text-xs text-neutral-500' }, 'หมายเหตุ: มี 1 ที่นั่งสำหรับ Host Region (TBD) ยังไม่ถูกจัดสรรอัตโนมัติในหน้านี้')
+          ),
+          React.createElement(DevPanel,{ results: testResults }),
+          React.createElement('footer',{ className:'pt-10 pb-16 text-xs text-neutral-500 space-y-2' },
+            React.createElement('div',null,'แหล่งข้อมูล: Liquipedia – PGS Points, PGC Regional Points & Qualification (กดปุ่มเพื่ออัปเดต)'),
+            React.createElement('div',null,'โมเดลการคำนวณ: รวมคะแนนฐาน + คะแนนจำลอง (EWC/PGS9/PGS10) → จัดอันดับ PGS → เลือก Top 8 → เติมโควต้าภูมิภาคโดยข้ามทีมที่ได้ Top 8 (pass-down)')
+          )
+        )
+      );
+    }
+
+    // -----------------------------
+    // Render
+    // -----------------------------
+    function labelRegion(rk){ switch(rk){ case 'CHINA':return 'China'; case 'KOREA':return 'Korea'; case 'APAC':return 'APAC'; case 'EMEA':return 'EMEA'; case 'AMERICAS':return 'Americas'; default:return '—'; } }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(React.createElement(App));
+
+  })();
+  </script>
+</body>
+</html>
