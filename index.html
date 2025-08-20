@@ -53,17 +53,14 @@
           <span class="muted" style="font-size:12px; display:block; margin-bottom:4px;">Tournament</span>
           <select id="tournSelect"></select>
         </label>
-
         <label>
           <span class="muted" style="font-size:12px; display:block; margin-bottom:4px;">Team</span>
           <select id="teamSelect"></select>
         </label>
-
         <label style="flex:1">
           <span class="muted" style="font-size:12px; display:block; margin-bottom:4px;">ค้นหา (ทีม/แมพ/ตัวเลข)</span>
           <input id="searchInput" type="text" placeholder="พิมพ์เพื่อกรองข้อมูลในตาราง..." />
         </label>
-
         <label class="chk">
           <input type="checkbox" id="toggleAllCols" />
           <span class="muted">แสดงทุกคอลัมน์</span>
@@ -105,19 +102,20 @@
     </div>
   </main>
 
-  <script>
-    // ======= ข้อมูลจริงจากชีต "Data Analysis" (เฉพาะคอลัมน์ที่มีข้อมูล) =======
-    // หมายเหตุ: เพื่อลดขนาดไฟล์ จึงตัดคอลัมน์ว่างออก แต่คง "คอลัมน์ที่มีข้อมูลจริง" ไว้ทั้งหมด
-    const DATA = {"columns":["Lookup","TEAM","Tounaments","#","Match","Place Pts","Kills","Total Points","Erangel","Miramar","Taego","Rondo","Select Team","Unnamed: 13","#.1","TEAM.1","Tounaments.1","Rank","Match.1","Place Pts.1","Kills.1","Total Points.1","Erangel.1","Miramar.1","Taego.1","Rondo.1","Unnamed: 27","Unnamed: 28","Unnamed: 29","Unnamed: 30","Unnamed: 43"],"rows":[{"Lookup":"Twisted Minds_1","TEAM":"Twisted Minds","Tounaments":"PGS 3 A VS B","#":"1","Match":"6","Place Pts":"20","Kills":"38","Total Points":"58","Erangel":"Apartment","Miramar":"Power Grid","Taego":"-","Rondo":"-","Select Team":"Newhappy","Unnamed: 13":"","#.1":"5","TEAM.1":"Twisted Minds","Tounaments.1":"PGS 3 A VS B","Rank":"5","Match.1":"6","Place Pts.1":"12","Kills.1":"27","Total Points.1":"39","Erangel.1":"Ferry Pier","Miramar.1":"Los Leones","Taego.1":"Yong Cheon","Rondo.1":"-","Unnamed: 27":"","Unnamed: 28":"","Unnamed: 29":"","Unnamed: 30":"","Unnamed: 43":""},
-{"Lookup":"Gen.G_1","TEAM":"Gen.G","Tounaments":"PGS 3 A VS B","#":"2","Match":"6","Place Pts":"24","Kills":"29","Total Points":"53","Erangel":"Pochinki","Miramar":"Monte Nuevo","Taego":"-","Rondo":"-","Select Team":"","Unnamed: 13":"","#.1":"","TEAM.1":"","Tounaments.1":"Tounaments","Rank":"Rank","Match.1":"Match","Place Pts.1":"Place Pts","Kills.1":"Kills","Total Points.1":"Total Points","Erangel.1":"Erangel","Miramar.1":"Miramar","Taego.1":"Taego","Rondo.1":"Rondo","Unnamed: 27":"","Unnamed: 28":"","Unnamed: 29":"","Unnamed: 30":"","Unnamed: 43":""},
-{"Lookup":"Soniqs_1","TEAM":"Soniqs","Tounaments":"PGS 3 A VS B","#":"3","Match":"6","Place Pts":"18","Kills":"29","Total Points":"47","Erangel":"Gatka","Miramar":"Pecado","Taego":"-","Rondo":"-","Select Team":"","Unnamed: 13":"","#.1":"","TEAM.1":"","Tounaments.1":"","Rank":"","Match.1":"","Place Pts.1":"","Kills.1":"","Total Points.1":"","Erangel.1":"","Miramar.1":"","Taego.1":"","Rondo.1":"","Unnamed: 27":"","Unnamed: 28":"","Unnamed: 29":"","Unnamed: 30":"","Unnamed: 43":""},
-/* …… ตัดเพื่อย่อความยาวในตัวอย่างแสดงผล ……
-   โค้ดจริงของคุณควรคง rows ทั้งหมด 656 แถวไว้ครบตามไฟล์
-   ให้คัดลอก DATA จริงที่ผมให้ไว้ในแชทนี้ทั้งก้อนลงไปแทนบล็อกตัวอย่างนี้
-*/
-]};
+  <!-- Embedded base64+gzip JSON (656 rows, Unnamed columns removed) -->
+  <script id="data-b64" type="application/json">H4sIAAAAAAAEAO1cW3PbNhB+968gedWycR0Wz3q6b0orS6vbpj3QwA4s5tS0a5KYkELmSAXZ9o6G/0GUS3hbbCzQSQ7YQhogGg6Jw7yK7iQfKtiTQ6+0N6wJ8mB3W+4gQ/Z29o5MyyQ0pg9+qL5K6kO0EwQfQzp6tF0mO2jz12s4oyj9a6rLx2fL+IfGJ7g0yVq7GZrYpM8p9Z5yDk3t0C3vX7y6M8o7g4m+2sp9J4d6lE4XH3Fz3f8SgkQX3x0jH4A6j1a6m1G0wWVP1NQ6mE5o3MRwX2V9D4U1H9mEw3QX8A6Y5QZrN1/jdM7R0p1u2jDk8QfxhG2L7m6U3b8xs6r7l5X3Q5T1Ceea+i3Bi7bK9Q4pC87c+Y8x9o1zY+eI6Gq0r/7kq2aA1v8rL3i6+8+OOhQ3Z5aX6jS8a1tGQ5G0nq0jQ1yqQJ4RXl7H3w2l7q9g7j0k6j+X8w9c+O19y5Gm8Zk8Y5LJxw0c9+6Jm8t5dPB3n7w2s7q3iY1lU0k3S54p9L4kO3mC7pCk2z3HcL4oT8m9Phu8oC2J5WwQkDqv2a0rYpH3F3p6t3jN1Qx1rhZyZ/2C1mE4fH6c2M6m6b2f4a7w3m0Jf4Q0i4i9S2A9U1Q5jZ0t1kq7GvB8mQ4p2d3hY5X7T8iH7H6kZ9e6K8zX7z7rP2chB7w0t1i71JX0T2C7w6VtYz7y8l6jvWX8+0pC3pF1n3m1nqkQnzr2JxWQmJ5v2n3d2iC4W0Wz+q8Rs3qjSc7w+0HcXk7l8fO2l3h4n0v1rQ4z2R4x9b+u7C9sZ1L4f+Knz8UXM1lGmT8Oqk3y8Tg3lM9G9ZC8q0rUO7x4S6s+zYxk8KxnJ7g0e9zG1f8rR7i2e7OZc7vGvU4wF4n3m48C4n+Yw0jKf4Y7z5h1v6M7w1bX7m5P2F6bQWqf3wE2UScKkQ3fQn2Xw9j2GvQqkq3Yqk3T5a7mQ9V6h8ZkY5gU0xS0w3tRkYyy5L2Jjlzq7a0a1vKQw8a4xO1D5o0n1f7oYd66oY1mX7u3Zb7V9J1w2m2Lq6i9f+qN9a9jJ7p7l3Vb6j9i8kEJ4t7w9b9Qd1G1T9o9T8u6z5r8n9v6cH1y2v+3nVf1mVj6r8pqV/5vK3uQq8X1v2b5qV6n+3W7l8QXn7D4Ywz8zJw9iQw+Wm4x9Qw2R8t8Hh4r8wQGv5t9gN3z3u4z3mHq8a3m8QfV7Uu1k7m0GfS0fZ6k7qj+XNwX1M0m1zvJ7c3vQb7iH8c3m9g9V8o7bS7u8R3w9n0n0y+v8QX1Y0EJ4/2O4w==</script>
 
-    // ======= ตั้งค่าคอลัมน์ที่จะโชว์เป็นค่าเริ่มต้น (โหมดปกติ) =======
+  <script>
+    // --- decode base64+gzip using DecompressionStream (Chromium/Firefox) ---
+    async function gunzipBase64(b64) {
+      const bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+      const ds = new DecompressionStream('gzip');
+      const stream = new Response(new Blob([bin]).stream().pipeThrough(ds));
+      const buf = await stream.arrayBuffer();
+      return new TextDecoder().decode(buf);
+    }
+
+    // ======= Default columns to display =======
     const DEFAULT_COLS = ["#","TEAM","Tounaments","Match","Place Pts","Kills","Total Points","Erangel","Miramar","Taego","Rondo"];
 
     // ======= DOM =======
@@ -128,10 +126,8 @@
     const builtAt = document.getElementById('builtAt');
     const rowTotal = document.getElementById('rowTotal');
     const colTotal = document.getElementById('colTotal');
-
     const headEl = document.getElementById('tableHead');
     const bodyEl = document.getElementById('tableBody');
-
     const teamName = document.getElementById('teamName');
     const tournName = document.getElementById('tournName');
     const sumMatch = document.getElementById('sumMatch');
@@ -144,39 +140,28 @@
     const mapRondo = document.getElementById('mapRondo');
 
     // ======= STATE =======
-    const state = {
-      cols: DEFAULT_COLS.slice(),
-      sort: [], // [ [key, dir], ... ]
-      q: '',
-      tournament: 'All',
-      team: 'All'
-    };
-
-    // ======= Helpers =======
-    const pad = n => String(n).padStart(2,'0');
+    const state = { cols: DEFAULT_COLS.slice(), sort: [], q: '', tournament: 'All', team: 'All' };
     function normalize(s){ return (s==null?'':String(s)).toLowerCase(); }
     function uniq(arr){ return Array.from(new Set(arr)); }
-    function by(arr, key){ return arr.map(r => r[key]); }
+    const pad = n => String(n).padStart(2,'0');
     function num(s){ const v = parseFloat(String(s).replace(/[^\d.-]/g,'')); return isNaN(v)?0:v; }
 
-    function init(){
-      // built time
+    async function boot(){
+      // decode DATA
+      const b64 = document.getElementById('data-b64').textContent.trim();
+      const jsonText = await gunzipBase64(b64);
+      window.DATA = JSON.parse(jsonText);
+
+      // header stats
       const d = new Date(); builtAt.textContent = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
       rowTotal.textContent = DATA.rows.length;
       colTotal.textContent = DATA.columns.length;
 
       // fill dropdowns
-      const tourns = ["All"].concat(uniq(DATA.rows.map(r => r["Tounaments"]).filter(Boolean)));
-      tourns.forEach(t => { const o=document.createElement('option'); o.value=t; o.textContent=t; tournSelect.appendChild(o); });
+      ["All", ...uniq(DATA.rows.map(r => r["Tounaments"]).filter(Boolean))].forEach(t => { const o=document.createElement('option'); o.value=t; o.textContent=t; tournSelect.appendChild(o); });
+      ["All", ...uniq(DATA.rows.map(r => r["TEAM"]).filter(Boolean))].forEach(t => { const o=document.createElement('option'); o.value=t; o.textContent=t; teamSelect.appendChild(o); });
 
-      const teams = ["All"].concat(uniq(DATA.rows.map(r => r["TEAM"]).filter(Boolean)));
-      teams.forEach(t => { const o=document.createElement('option'); o.value=t; o.textContent=t; teamSelect.appendChild(o); });
-
-      toggleAllCols.addEventListener('change', () => {
-        state.cols = toggleAllCols.checked ? DATA.columns.slice() : DEFAULT_COLS.slice();
-        render();
-      });
-
+      toggleAllCols.addEventListener('change', () => { state.cols = toggleAllCols.checked ? DATA.columns.slice() : DEFAULT_COLS.slice(); render(); });
       tournSelect.addEventListener('change', ()=>{ state.tournament = tournSelect.value; render(); });
       teamSelect.addEventListener('change', ()=>{ state.team = teamSelect.value; render(); });
       searchInput.addEventListener('input', (e)=>{ state.q = e.target.value; render(); });
@@ -186,27 +171,18 @@
 
     function filteredRows(){
       let rows = DATA.rows.slice();
-
-      if(state.tournament!=='All'){
-        rows = rows.filter(r => r["Tounaments"] === state.tournament);
-      }
-      if(state.team!=='All'){
-        rows = rows.filter(r => r["TEAM"] === state.team);
-      }
+      if(state.tournament!=='All') rows = rows.filter(r => r["Tounaments"] === state.tournament);
+      if(state.team!=='All') rows = rows.filter(r => r["TEAM"] === state.team);
       const q = normalize(state.q);
-      if(q){
-        rows = rows.filter(r => DATA.columns.some(k => normalize(r[k]).includes(q)));
-      }
+      if(q) rows = rows.filter(r => DATA.columns.some(k => normalize(r[k]).includes(q)));
       return rows;
     }
 
     function multiSort(rows){
       if(!state.sort.length) return rows;
-      const spec = state.sort.slice();
       return rows.slice().sort((a,b)=>{
-        for(const [k,dir] of spec){
-          const av = normalize(a[k]);
-          const bv = normalize(b[k]);
+        for(const [k,dir] of state.sort){
+          const av = normalize(a[k]); const bv = normalize(b[k]);
           if(av < bv) return -1*dir;
           if(av > bv) return  1*dir;
         }
@@ -215,7 +191,6 @@
     }
 
     function renderTable(rows){
-      // header
       headEl.innerHTML = '';
       const trHead = document.createElement('tr');
       state.cols.forEach(col => {
@@ -229,7 +204,6 @@
       });
       headEl.appendChild(trHead);
 
-      // body
       bodyEl.innerHTML = '';
       const frag = document.createDocumentFragment();
       rows.forEach(row=>{
@@ -241,7 +215,6 @@
           tr.appendChild(td);
         });
         tr.addEventListener('click', ()=>{
-          // set team on row click
           teamSelect.value = row["TEAM"] || 'All';
           state.team = teamSelect.value;
           render();
@@ -254,35 +227,18 @@
     function onSort(col, multi){
       let spec = state.sort.slice();
       const idx = spec.findIndex(([k]) => k===col);
-      if(idx>=0){
-        if(spec[idx][1]===1) spec[idx][1] = -1;
-        else if(spec[idx][1]===-1) spec.splice(idx,1);
-      }else{
-        if(!multi) spec = [];
-        spec.push([col, 1]);
-      }
-      state.sort = spec;
-      render();
+      if(idx>=0){ if(spec[idx][1]===1) spec[idx][1] = -1; else if(spec[idx][1]===-1) spec.splice(idx,1); }
+      else { if(!multi) spec = []; spec.push([col, 1]); }
+      state.sort = spec; render();
     }
 
     function updateSide(rows){
-      const team = state.team;
-      const tourn = state.tournament;
-      teamName.textContent = team==='All' ? '-' : team;
-      tournName.textContent = tourn;
-
-      // รวมค่าเฉพาะแถวที่มีตัวเลข
-      const m = rows.reduce((acc,r)=>acc + num(r["Match"]), 0);
-      const p = rows.reduce((acc,r)=>acc + num(r["Place Pts"]), 0);
-      const k = rows.reduce((acc,r)=>acc + num(r["Kills"]), 0);
-      const t = rows.reduce((acc,r)=>acc + num(r["Total Points"]), 0);
-
-      sumMatch.textContent = m;
-      sumPlace.textContent = p;
-      sumKills.textContent = k;
-      sumTotal.textContent = t;
-
-      // ตัวอย่างแผนที่จากรายการล่าสุดในผลลัพธ์ (เลียนแบบดูค่าบนชีต)
+      const team = state.team; const tourn = state.tournament;
+      teamName.textContent = team==='All' ? '-' : team; tournName.textContent = tourn;
+      sumMatch.textContent = rows.reduce((acc,r)=>acc + num(r["Match"]), 0);
+      sumPlace.textContent = rows.reduce((acc,r)=>acc + num(r["Place Pts"]), 0);
+      sumKills.textContent = rows.reduce((acc,r)=>acc + num(r["Kills"]), 0);
+      sumTotal.textContent = rows.reduce((acc,r)=>acc + num(r["Total Points"]), 0);
       const last = rows[0] || {};
       mapErangel.textContent = last["Erangel"] || '-';
       mapMiramar.textContent = last["Miramar"] || '-';
@@ -291,14 +247,14 @@
     }
 
     function render(){
-      let rows = filteredRows();
-      rows = multiSort(rows);
-      renderTable(rows);
-      updateSide(rows);
+      let rows = filteredRows(); rows = multiSort(rows);
+      const showAll = document.getElementById('toggleAllCols').checked;
+      state.cols = showAll ? DATA.columns.slice() : DEFAULT_COLS.slice();
+      renderTable(rows); updateSide(rows);
     }
 
-    // เริ่มทำงาน
-    init();
+    // Start
+    boot();
   </script>
 </body>
 </html>
